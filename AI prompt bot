@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chatbot Interface</title>
+</head>
+<body>
+  <div id="root"></div> 
+</body>
+</html>
+
+import React, { useState, useRef, useEffect } from 'react';
+      import { Send, HelpCircle } from 'lucide-react';
+      import { Input } from "@/components/ui/input";
+      import { Button } from "@/components/ui/button";
+      import { ScrollArea } from "@/components/ui/scroll-area";
+      import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+
+      const ChatMessage = ({ message, isUser, timestamp }) => (
+        <div className={`mb-4 md:mb-6 ${isUser ? 'text-right' : 'text-left'}`}>
+          <div className={`inline-block p-3 md:p-4 rounded-lg shadow ${isUser ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
+            <p className="text-base md:text-xl mb-1 md:mb-2">{message}</p>
+            <p className="text-xs md:text-sm text-gray-500">{timestamp}</p>
+          </div>
+        </div>
+      );
+
+      const ChatbotInterface = () => {
+        const [messages, setMessages] = useState([]);
+        const [input, setInput] = useState('');
+        const [showHelp, setShowHelp] = useState(false);
+        const [isLoading, setIsLoading] = useState(false);
+        const messagesEndRef = useRef(null);
+
+        useEffect(() => {
+          const savedMessages = localStorage.getItem('chatMessages');
+          if (savedMessages) {
+            setMessages(JSON.parse(savedMessages));
+          } else {
+            setMessages([{ text: "Olá! Sou seu assistente virtual. Como posso ajudar você hoje?", isUser: false, timestamp: new Date().toLocaleTimeString() }]);
+          }
+        }, []);
+
+        useEffect(() => {
+          localStorage.setItem('chatMessages', JSON.stringify(messages));
+          scrollToBottom();
+        }, [messages]);
+
+        const scrollToBottom = () => {
+          messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        };
+
+        const playSound = () => {
+          const audio = new Audio('/path-to-your-sound-file.mp3'); // Replace with your sound file
+          audio.play();
+        };
+
+        const handleSend = () => {
+          if (input.trim()) {
+            setIsLoading(true);
+            playSound();
+            const newMessage = { text: input, isUser: true, timestamp: new Date().toLocaleTimeString() };
+            setMessages(prevMessages => [...prevMessages, newMessage]);
+            setInput('');
+
+            setTimeout(() => {
+              const botResponse = generateBotResponse(input);
+              setMessages(prevMessages => [...prevMessages, { text: botResponse, isUser: false, timestamp: new Date().toLocaleTimeString() }]);
+              setIsLoading(false);
+            }, 1000);
+          }
+        };
+
+        const handleKeyPress = (e) => {
+          if (e.key === 'Enter' && !isLoading) {
+            handleSend();
+          }
+        };
+
+        const generateBotResponse = (userInput) => {
+          const responses = [
+            "Entendo seu ponto de vista. Poderia me dar mais detalhes sobre isso?",
+            "Interessante. Deixe-me pensar um pouco sobre o que você disse.",
+            "Obrigado por compartilhar. Há algo específico que gostaria de saber?",
+            "Ótima pergunta! Farei o meu melhor para responder de forma clara.",
+            "Compreendo. Você poderia fornecer mais contexto para eu entender melhor?"
+          ];
+          return responses[Math.floor(Math.random() * responses.length)];
+        };
+
+        return (
+          <div className="flex flex-col h-screen max-w-full md:max-w-3xl mx-auto bg-white shadow-xl rounded-lg overflow-hidden">
+            <div className="bg-blue-700 p-4 md:p-6 rounded-t-lg">
+              <h1 className="text-2xl md:text-4xl font-bold text-white text-center">Assistente de Conversação</h1>
+            </div>
+
+            <ScrollArea className="flex-grow p-4 md:p-8 bg-gray-50">
+              {messages.map((msg, index) => (
+                <ChatMessage key={index} message={msg.text} isUser={msg.isUser} timestamp={msg.timestamp} />
+              ))}
+              <div ref={messagesEndRef} />
+            </ScrollArea>
+
+            <div className="p-4 md:p-6 border-t bg-gray-100">
+              <div className="flex space-x-2 md:space-x-4 items-center">
+                <Input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Como posso te ajudar hoje?"
+                  className="flex-grow p-3 md:p-5 text-lg md:text-2xl border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  disabled={isLoading}
+                />
+                <Button 
+                  onClick={handleSend} 
+                  className={`p-3 md:p-5 text-white rounded-lg transition-colors ${isLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <div className="animate-spin rounded-full h-5 w-5 md:h-6 md:w-6 border-b-2 border-white"></div>
+                  ) : (
+                    <Send size={24} className="md:w-7 md:h-7" />
+                  )}
+                </Button>
+                <Button onClick={() => setShowHelp(!showHelp)} className="p-3 md:p-5 bg-gray-200 text-blue-700 rounded-lg hover:bg-gray-300 transition-colors">
+                  <HelpCircle size={24} className="md:w-7 md:h-7" />
+                </Button>
+              </div>
+              {showHelp && (
+                <Alert className="mt-4 bg-blue-50 border-blue-200">
+                  <AlertTitle className="text-lg md:text-xl font-semibold text-blue-800">Como usar este chat</AlertTitle>
+                  <AlertDescription className="text-base md:text-lg text-blue-700">
+                    <ul className="list-disc list-inside">
+                      <li>Digite sua pergunta ou comentário na caixa de texto abaixo.</li>
+                      <li>Pressione o botão azul com o ícone de enviar ou a tecla Enter para enviar sua mensagem.</li>
+                      <li>Aguarde a resposta do assistente virtual.</li>
+                      <li>Você pode fazer quantas perguntas quiser!</li>
+                      <li>Suas conversas serão salvas automaticamente.</li>
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          </div>
+        );
+      };
+
+      export default ChatbotInterface;
